@@ -303,7 +303,23 @@ ip_input(struct pbuf *p, struct netif *inp)
       }
     } while(netif != NULL);
   }
+  
+  /* MAC-check already done, received here a IP packet with wrong IP address but matched MAC? -> set income packet address as IP address. */
+  if(!ip_addr_cmp(&(iphdr->dest), &(inp->ip_addr)) && !ip_addr_isbroadcast(&(iphdr->dest), inp) && !ip_addr_ismulticast(&(iphdr->dest)))
+  {
+	  if(IPH_PROTO(iphdr) == IP_PROTO_ICMP)
+	  {
+		  //Set IP Address
+		  inp->ip_addr = iphdr->dest;
 
+		  //send response to first received Ping
+		  icmp_input(p, inp);
+
+		  //you probably want to save the IP address and write it to the user page
+		  //SaveAndWriteIP(inp->ip_addr.addr)
+	  }
+  }
+  
 #if LWIP_DHCP
   /* Pass DHCP messages regardless of destination address. DHCP traffic is addressed
    * using link layer addressing (such as Ethernet MAC) so we must not filter on IP.
